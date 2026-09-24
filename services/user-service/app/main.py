@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.database import Base, engine, get_db
 from app.models import User
-from app.schemas import UserCreate
+from app.schemas import UserCreate, UserUpdate
 
 app = FastAPI(title="User Service")
 
@@ -72,4 +72,54 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
         "id": user.id,
         "name": user.name,
         "email": user.email
+    }
+
+@app.put("/users/{user_id}")
+def update_user(
+    user_id: int,
+    user: UserUpdate,
+    db: Session = Depends(get_db)
+):
+    db_user = db.query(User).filter(User.id == user_id).first()
+
+    if db_user is None:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    db_user.name = user.name
+    db_user.email = user.email
+
+    db.commit()
+    db.refresh(db_user)
+
+    return {
+        "message": "User updated successfully",
+        "user": {
+            "id": db_user.id,
+            "name": db_user.name,
+            "email": db_user.email
+        }
+    }
+
+@app.delete("/users/{user_id}")
+def delete_user(
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+    db_user = db.query(User).filter(User.id == user_id).first()
+
+    if db_user is None:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    db.delete(db_user)
+    db.commit()
+
+    return {
+        "message": "User deleted successfully",
+        "user_id": user_id
     }
